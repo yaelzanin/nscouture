@@ -38,9 +38,10 @@
         body::-webkit-scrollbar {
             display: none;
         }
-        /* Sur desktop seulement, on cache le vrai curseur */
+        /* Sur desktop seulement, on cache le vrai curseur partout (même sur les liens) */
         @media (min-width: 768px) {
-            body { cursor: none; overflow: hidden; }
+            * { cursor: none !important; }
+            body { overflow: hidden; }
         }
         .no-select {
             user-select: none;
@@ -64,6 +65,7 @@
         const App = () => {
           const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
           const [isMouseVisible, setIsMouseVisible] = useState(false);
+          const [isHoveringLink, setIsHoveringLink] = useState(false);
 
           // INERTIE GLOBALE (Uniquement sur Desktop)
           useEffect(() => {
@@ -134,6 +136,10 @@
                 const handleMouseMove = (e) => {
                   setMousePos({ x: e.clientX, y: e.clientY });
                   setIsMouseVisible(true);
+                  
+                  // Détecte si la souris survole un lien ou un bouton
+                  const isLink = e.target.closest('a, button, [role="button"]');
+                  setIsHoveringLink(!!isLink);
                 };
                 const handleMouseLeave = () => setIsMouseVisible(false);
                 const handleMouseEnter = () => setIsMouseVisible(true);
@@ -164,15 +170,22 @@
               
               {/* CURSEUR AWWWARDS-STYLE (Masqué sur mobile) */}
               <div 
-                className="pointer-events-none fixed top-0 left-0 z-[100] rounded-full mix-blend-difference items-center justify-center hidden md:flex transition-opacity duration-300"
+                className="pointer-events-none fixed top-0 left-0 z-[100] hidden md:flex transition-opacity duration-300 mix-blend-difference"
                 style={{
-                  transform: `translate(${mousePos.x - 6}px, ${mousePos.y - 6}px)`,
-                  width: '12px',
-                  height: '12px',
-                  backgroundColor: 'white',
+                  transform: `translate(${mousePos.x}px, ${mousePos.y}px)`,
                   opacity: isMouseVisible ? 1 : 0
                 }}
               >
+                {/* Le cercle intérieur gère l'animation de taille de façon fluide sans affecter le suivi de la souris */}
+                <div 
+                  className="rounded-full bg-white flex items-center justify-center transition-all duration-300 ease-out overflow-hidden"
+                  style={{
+                    width: isHoveringLink ? '24px' : '12px', /* Taille à peine agrandie lors du survol */
+                    height: isHoveringLink ? '24px' : '12px',
+                    transform: 'translate(-50%, -50%)' // Centre parfaitement le point ou le grand cercle sous la souris
+                  }}
+                >
+                </div>
               </div>
 
               {/* NAVIGATION */}
@@ -374,13 +387,13 @@
               </section>
 
               {/* FOOTER (Restructuré pour tenir dans 1 écran complet) */}
-              <footer id="portfolio" className="min-h-[70vh] md:h-screen flex flex-col justify-between p-6 md:p-10 bg-neutral-950 relative overflow-hidden">
+              <footer id="portfolio" className="min-h-[85vh] md:h-screen flex flex-col justify-between p-6 md:p-10 bg-neutral-950 relative overflow-hidden">
                 
                 {/* Espace vide en haut pour éviter de taper dans le header */}
-                <div className="pt-20 md:pt-24"></div>
+                <div className="pt-24 md:pt-24"></div>
                 
                 {/* Bloc de texte centré verticalement et horizontalement */}
-                <div className="flex-1 flex flex-col justify-center items-center z-10 relative w-full max-w-4xl mx-auto text-center mb-16 md:mb-24">
+                <div className="flex-1 flex flex-col justify-center items-center z-10 relative w-full max-w-4xl mx-auto text-center py-12 md:py-0 mb-12 md:mb-24">
                   <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium leading-[1.2] mb-6 md:mb-8">
                     Une démarche <br/>
                     <span className="font-serif italic text-pink-500">artistique</span>, avant tout.
