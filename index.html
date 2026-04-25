@@ -177,11 +177,11 @@
 
               {/* NAVIGATION */}
               <nav className="fixed top-0 w-full p-5 md:p-10 flex justify-between items-start z-50 mix-blend-difference text-white">
-                <div className="text-xs md:text-sm font-medium tracking-tight">
+                <div className="text-xs md:text-sm font-medium tracking-tight z-50 relative">
                   N.S COUTURE <br />
                   <span className="text-neutral-400 font-mono text-[9px] md:text-[10px] uppercase tracking-widest mt-1 block">Par @__nimzzzz__ &mdash; FR</span>
                 </div>
-                <div className="text-right text-xs md:text-sm font-medium uppercase tracking-tight flex flex-col items-end gap-2 md:gap-1">
+                <div className="text-right text-xs md:text-sm font-medium uppercase tracking-tight flex flex-col items-end gap-2 md:gap-1 z-50 relative">
                   <a href="#labo-couture" onClick={(e) => handleSlowScroll(e, 'labo-couture')} className="md:hover:italic transition-all">Labo Couture</a>
                   <a href="#labo-mailles" onClick={(e) => handleSlowScroll(e, 'labo-mailles')} className="md:hover:italic transition-all">Labo Mailles</a>
                   <a href="#portfolio" onClick={(e) => handleSlowScroll(e, 'portfolio')} className="md:hover:italic transition-all">Le Projet</a>
@@ -373,33 +373,37 @@
                 </div>
               </section>
 
-              {/* FOOTER */}
-              <footer id="portfolio" className="min-h-[80vh] md:h-screen flex flex-col justify-between p-5 md:p-10 bg-neutral-950 pt-20">
-                <div className="flex flex-col md:flex-row justify-between items-start gap-10">
-                  <div className="max-w-xl">
-                    <h2 className="text-2xl md:text-5xl font-medium leading-tight mb-6 md:mb-8">
-                      Une démarche <br/>
-                      <span className="font-serif italic text-pink-500">artistique</span>, avant tout.
-                    </h2>
-                    <p className="font-mono text-[10px] md:text-[12px] text-neutral-500 uppercase tracking-widest leading-relaxed">
-                      Ce portfolio est une archive vivante de mes expérimentations. Une vitrine de la mode au point de convergence des luttes, pensée non pas comme un produit, mais comme un message.
-                    </p>
-                  </div>
+              {/* FOOTER (Restructuré pour tenir dans 1 écran complet) */}
+              <footer id="portfolio" className="min-h-[70vh] md:h-screen flex flex-col justify-between p-6 md:p-10 bg-neutral-950 relative overflow-hidden">
+                
+                {/* Espace vide en haut pour éviter de taper dans le header */}
+                <div className="pt-20 md:pt-24"></div>
+                
+                {/* Bloc de texte centré verticalement et horizontalement */}
+                <div className="flex-1 flex flex-col justify-center items-center z-10 relative w-full max-w-4xl mx-auto text-center mb-16 md:mb-24">
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium leading-[1.2] mb-6 md:mb-8">
+                    Une démarche <br/>
+                    <span className="font-serif italic text-pink-500">artistique</span>, avant tout.
+                  </h2>
+                  
+                  <p className="font-mono text-[10px] md:text-xs text-neutral-400 uppercase tracking-widest leading-relaxed max-w-xl mb-12 md:mb-16">
+                    Ce portfolio est une archive vivante de mes expérimentations. Une vitrine de la mode au point de convergence des luttes, pensée non pas comme un produit, mais comme un message.
+                  </p>
 
-                  <div className="flex flex-col gap-4 text-left md:text-right mt-6 md:mt-0 z-50">
-                    <a href="https://www.instagram.com/n.scouture/" target="_blank" rel="noreferrer" className="text-xl md:text-4xl uppercase tracking-tighter hover:text-pink-500 transition-colors font-bold relative inline-block">
-                      Instagram <span className="font-serif italic font-light">&rarr;</span>
-                    </a>
-                  </div>
+                  {/* Bouton Instagram ergonomique en forme de pilule */}
+                  <a href="https://www.instagram.com/n.scouture/" target="_blank" rel="noreferrer" className="text-xl md:text-2xl uppercase tracking-tighter hover:text-black hover:bg-pink-500 transition-all duration-300 font-black inline-flex items-center gap-3 group border border-neutral-800 rounded-full px-8 py-4">
+                    Instagram <span className="font-serif italic font-light group-hover:translate-x-2 transition-transform">&rarr;</span>
+                  </a>
                 </div>
 
-                <div className="w-full text-center overflow-hidden relative mt-20 md:mt-0">
-                  <h1 className="text-[13vw] md:text-[16vw] font-black leading-[0.7] tracking-tighter text-neutral-900 select-none relative z-10 whitespace-nowrap">
+                {/* Très gros texte de fond (Collé en bas) */}
+                <div className="w-full text-center relative mt-auto pb-2 max-w-7xl mx-auto">
+                  <h1 className="text-[17vw] md:text-[15vw] font-black leading-[0.7] tracking-tighter text-neutral-900 select-none relative z-10 whitespace-nowrap overflow-hidden opacity-80">
                     N.S COUTURE
                   </h1>
-                  <div className="flex justify-between items-center mt-4 font-mono text-[8px] md:text-[10px] text-neutral-600 uppercase tracking-widest relative z-10">
+                  <div className="flex flex-row justify-between items-end mt-6 md:mt-4 font-mono text-[9px] md:text-xs text-neutral-600 uppercase tracking-widest relative z-10">
                     <span>&copy; 2026</span>
-                    <span className="hidden md:inline">Convergence des luttes</span>
+                    <span className="text-center">Convergence des luttes</span>
                     <span>FRANCE</span>
                   </div>
                 </div>
