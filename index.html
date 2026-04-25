@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>N.S COUTURE - Portfolio</title>
     
     <!-- Favicon classique -->
@@ -29,14 +29,18 @@
             will-change: transform;
         }
         body {
-          cursor: none; /* Masque le curseur par défaut */
           background-color: #030303;
           -ms-overflow-style: none;
           scrollbar-width: none; 
-          overflow: hidden; /* Empêche le scroll natif saccadé */
+          overflow-x: hidden;
         }
+        /* Cache la scrollbar native mais permet le scroll fluide natif sur mobile */
         body::-webkit-scrollbar {
             display: none;
+        }
+        /* Sur desktop seulement, on cache le vrai curseur */
+        @media (min-width: 768px) {
+            body { cursor: none; overflow: hidden; }
         }
         .no-select {
             user-select: none;
@@ -52,29 +56,20 @@
     </style>
 </head>
 <body>
-    <!-- Le point d'ancrage de notre application React -->
     <div id="root"></div>
 
-    <!-- Le code de l'application -->
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Icône SVG
-        const ArrowDownRightIcon = ({ className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                <line x1="7" y1="7" x2="17" y2="17"></line>
-                <polyline points="17 7 17 17 7 17"></polyline>
-            </svg>
-        );
-
         const App = () => {
           const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+          const [isMouseVisible, setIsMouseVisible] = useState(false);
 
-          // INERTIE GLOBALE (LOCOMOTIVE SCROLL EFFECT)
+          // INERTIE GLOBALE (Uniquement sur Desktop)
           useEffect(() => {
             let currentY = window.scrollY;
             let targetY = window.scrollY;
-            let ease = 0.04; // Poids de l'inertie (plus c'est bas, plus c'est lourd et lent)
+            let ease = 0.04; 
             let requestRef = null;
 
             const updateScroll = () => {
@@ -84,21 +79,18 @@
                 currentY += (targetY - currentY) * ease;
                 window.scrollTo(0, currentY);
                 
-                // Continue l'animation jusqu'à stabilisation
                 if (Math.abs(targetY - currentY) > 0.5) {
                     requestRef = requestAnimationFrame(updateScroll);
                 } else {
-                    currentY = targetY; // Forcer l'alignement parfait à la fin
+                    currentY = targetY;
                     requestRef = null;
                 }
             };
 
             const onWheel = (e) => {
-                // Seulement sur desktop (les mobiles ont déjà une inertie native parfaite)
                 if (window.innerWidth > 768) {
                     e.preventDefault();
-                    targetY += e.deltaY * 1.5; // Multiplicateur de distance par coup de molette
-                    
+                    targetY += e.deltaY * 1.5; 
                     if (!requestRef) {
                         requestRef = requestAnimationFrame(updateScroll);
                     }
@@ -107,8 +99,13 @@
 
             const onNavScroll = (e) => {
                 targetY = e.detail;
-                if (!requestRef) {
-                    requestRef = requestAnimationFrame(updateScroll);
+                if (window.innerWidth > 768) {
+                    if (!requestRef) {
+                        requestRef = requestAnimationFrame(updateScroll);
+                    }
+                } else {
+                    // Défilement natif fluide sur mobile
+                    window.scrollTo({ top: targetY, behavior: 'smooth' });
                 }
             };
 
@@ -128,19 +125,31 @@
             const target = document.getElementById(targetId);
             if (!target) return;
             const targetPosition = target.getBoundingClientRect().top + window.scrollY;
-            // Diffuse l'événement pour que le moteur d'inertie prenne le relai
             window.dispatchEvent(new CustomEvent('customNavScroll', { detail: targetPosition }));
           };
 
           useEffect(() => {
-            const handleMouseMove = (e) => {
-              setMousePos({ x: e.clientX, y: e.clientY });
-            };
-            window.addEventListener('mousemove', handleMouseMove);
-            return () => window.removeEventListener('mousemove', handleMouseMove);
+            // Actif uniquement sur desktop pour économiser de la batterie sur mobile
+            if (window.innerWidth > 768) {
+                const handleMouseMove = (e) => {
+                  setMousePos({ x: e.clientX, y: e.clientY });
+                  setIsMouseVisible(true);
+                };
+                const handleMouseLeave = () => setIsMouseVisible(false);
+                const handleMouseEnter = () => setIsMouseVisible(true);
+
+                window.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseleave', handleMouseLeave);
+                document.addEventListener('mouseenter', handleMouseEnter);
+
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseleave', handleMouseLeave);
+                    document.removeEventListener('mouseenter', handleMouseEnter);
+                };
+            }
           }, []);
 
-          // Liste des mots pour le bandeau défilant
           const marqueeItems = [
             { text: "Labo Mailles", style: "italic font-serif font-light text-white" },
             { text: "Seconde Main", style: "" },
@@ -151,37 +160,37 @@
           ];
 
           return (
-            <div className="bg-[#030303] min-h-screen text-neutral-200 font-sans selection:bg-pink-500 selection:text-white overflow-x-hidden">
+            <div className="bg-[#030303] min-h-screen text-neutral-200 font-sans selection:bg-pink-500 selection:text-white overflow-x-hidden w-full max-w-[100vw]">
               
-              {/* CURSEUR AWWWARDS-STYLE (Taille fixe, suit la souris) */}
+              {/* CURSEUR AWWWARDS-STYLE (Masqué sur mobile) */}
               <div 
-                className="pointer-events-none fixed top-0 left-0 z-[100] rounded-full mix-blend-difference flex items-center justify-center"
+                className="pointer-events-none fixed top-0 left-0 z-[100] rounded-full mix-blend-difference items-center justify-center hidden md:flex transition-opacity duration-300"
                 style={{
                   transform: `translate(${mousePos.x - 6}px, ${mousePos.y - 6}px)`,
                   width: '12px',
                   height: '12px',
                   backgroundColor: 'white',
+                  opacity: isMouseVisible ? 1 : 0
                 }}
               >
               </div>
 
               {/* NAVIGATION */}
-              <nav className="fixed top-0 w-full p-6 md:p-10 flex justify-between items-start z-50 mix-blend-difference text-white">
-                <div className="text-sm font-medium tracking-tight">
+              <nav className="fixed top-0 w-full p-5 md:p-10 flex justify-between items-start z-50 mix-blend-difference text-white">
+                <div className="text-xs md:text-sm font-medium tracking-tight">
                   N.S COUTURE <br />
-                  <span className="text-neutral-400 font-mono text-[10px] uppercase tracking-widest">Par @__nimzzzz__ &mdash; Dijon, FR</span>
+                  <span className="text-neutral-400 font-mono text-[9px] md:text-[10px] uppercase tracking-widest mt-1 block">Par @__nimzzzz__ &mdash; FR</span>
                 </div>
-                <div className="text-right text-sm font-medium uppercase tracking-tight flex flex-col items-end gap-1">
-                  <a href="#labo-couture" onClick={(e) => handleSlowScroll(e, 'labo-couture')} className="hover:italic transition-all">Labo Couture</a>
-                  <a href="#labo-mailles" onClick={(e) => handleSlowScroll(e, 'labo-mailles')} className="hover:italic transition-all">Labo Mailles</a>
-                  <a href="#portfolio" onClick={(e) => handleSlowScroll(e, 'portfolio')} className="hover:italic transition-all">Le Projet</a>
+                <div className="text-right text-xs md:text-sm font-medium uppercase tracking-tight flex flex-col items-end gap-2 md:gap-1">
+                  <a href="#labo-couture" onClick={(e) => handleSlowScroll(e, 'labo-couture')} className="md:hover:italic transition-all">Labo Couture</a>
+                  <a href="#labo-mailles" onClick={(e) => handleSlowScroll(e, 'labo-mailles')} className="md:hover:italic transition-all">Labo Mailles</a>
+                  <a href="#portfolio" onClick={(e) => handleSlowScroll(e, 'portfolio')} className="md:hover:italic transition-all">Le Projet</a>
                 </div>
               </nav>
 
-              {/* HERO SECTION - RESTRUCTURED (Editorial Style) */}
+              {/* HERO SECTION */}
               <section className="relative h-screen w-full overflow-hidden flex items-center bg-[#030303]">
-                {/* Lignes de structure (Grid brutaliste) */}
-                <div className="absolute inset-0 pointer-events-none flex justify-between px-6 md:px-10 z-0 opacity-20">
+                <div className="absolute inset-0 pointer-events-none flex justify-between px-4 md:px-10 z-0 opacity-20">
                   <div className="w-[1px] h-full bg-neutral-800"></div>
                   <div className="w-[1px] h-full bg-neutral-800 hidden md:block"></div>
                   <div className="w-[1px] h-full bg-neutral-800 hidden lg:block"></div>
@@ -189,74 +198,66 @@
                 </div>
 
                 {/* Image Editoriale Flottante */}
-                <div 
-                  className="absolute right-[-10%] md:right-[5%] lg:right-[15%] top-[15%] md:top-[10%] w-[80vw] md:w-[45vw] lg:w-[30vw] aspect-[3/4] bg-neutral-900 z-0 opacity-50 md:opacity-80"
-                >
+                <div className="absolute right-[-10%] md:right-[5%] lg:right-[15%] top-[25%] md:top-[10%] w-[95vw] md:w-[45vw] lg:w-[30vw] aspect-[3/4] bg-neutral-900 z-0 opacity-40 md:opacity-80">
                   <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center grayscale contrast-[1.2] opacity-80 mix-blend-overlay"></div>
-                  {/* Légende tournée à 90 degrés */}
-                  <div className="absolute bottom-4 right-[-1.5rem] font-mono text-[10px] text-neutral-400 tracking-widest uppercase origin-bottom-right -rotate-90">
+                  <div className="absolute bottom-4 right-[-1rem] font-mono text-[9px] md:text-[10px] text-neutral-400 tracking-widest uppercase origin-bottom-right -rotate-90">
                     [ ARCHIVE_01.MP4 ]
                   </div>
                 </div>
 
-                {/* Grand Titre (Mix Blend Difference pour chevaucher l'image) - Taille réduite */}
-                <div className="relative z-10 w-full px-6 md:px-10 pointer-events-none mix-blend-difference text-white flex flex-col justify-center h-full mt-20 md:mt-0">
-                  <h1 className="text-[14vw] md:text-[10vw] font-black leading-[0.75] tracking-tighter uppercase flex flex-col">
+                {/* Grand Titre */}
+                <div className="relative z-10 w-full px-5 md:px-10 pointer-events-none mix-blend-difference text-white flex flex-col justify-center h-full mt-10 md:mt-0">
+                  <h1 className="text-[22vw] md:text-[14vw] font-black leading-[0.8] md:leading-[0.75] tracking-tighter uppercase flex flex-col">
                     <span className="ml-[-1vw]">Textile</span>
-                    <span className="font-serif italic font-light tracking-tight ml-[6vw] md:ml-[12vw] text-pink-500 lowercase">manifeste</span>
+                    <span className="font-serif italic font-light tracking-tight ml-[15vw] md:ml-[12vw] text-pink-500 lowercase">manifeste</span>
                   </h1>
                 </div>
 
                 {/* Éléments du bas */}
-                <div className="absolute bottom-10 left-6 md:left-10 z-20 max-w-[200px] md:max-w-[250px]">
-                  <p className="font-mono text-[10px] text-neutral-400 uppercase tracking-widest leading-relaxed border-l border-pink-500 pl-3">
+                <div className="absolute bottom-8 md:bottom-10 left-5 md:left-10 z-20 max-w-[200px] md:max-w-[250px]">
+                  <p className="font-mono text-[9px] md:text-[10px] text-neutral-400 uppercase tracking-widest leading-relaxed border-l border-pink-500 pl-3">
                     La mode au point de convergence des luttes.
                   </p>
-                </div>
-                
-                <div className="absolute bottom-10 right-6 md:right-10 z-20 flex-row items-center gap-4 hidden md:flex">
-                   <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">Découvrir</span>
-                   <div className="w-16 h-[1px] bg-neutral-500"></div>
                 </div>
               </section>
 
               {/* MANIFESTE - SCROLL ASYMÉTRIQUE */}
-              <section id="labo-couture" className="py-32 px-6 md:px-20 relative">
-                <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-20">
+              <section id="labo-couture" className="py-24 md:py-32 px-5 md:px-20 relative">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-16 md:gap-20">
                   
                   {/* Colonne Gauche (Texte) */}
-                  <div className="flex-1 space-y-32 pt-20">
+                  <div className="flex-1 space-y-20 md:space-y-32 pt-10 md:pt-20">
                     <div>
-                      <p className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-6 border-b border-neutral-800 pb-2 inline-block">
+                      <p className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-4 md:mb-6 border-b border-neutral-800 pb-2 inline-block">
                         01 &mdash; Labo Couture
                       </p>
-                      <p className="text-2xl md:text-4xl font-medium leading-tight">
+                      <p className="text-xl md:text-4xl font-medium leading-tight">
                         &quot;La cravate : détourner un symbole du <span className="text-blue-500 italic font-serif">patriarcat</span> pour s&apos;en <span className="text-pink-500 italic font-serif">émanciper</span>.&quot;
                       </p>
                     </div>
 
                     <div>
-                      <p className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-6 border-b border-neutral-800 pb-2 inline-block">
+                      <p className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-4 md:mb-6 border-b border-neutral-800 pb-2 inline-block">
                         02 &mdash; Jupe Signature
                       </p>
-                      <p className="text-2xl md:text-4xl font-medium leading-tight text-neutral-400">
+                      <p className="text-xl md:text-4xl font-medium leading-tight text-neutral-400">
                         &quot;Mosaïque sensée inspirée de la <span className="text-yellow-400 text-white italic font-serif">créolisation</span>, de la fusion des peuples, des cultures et <span className="text-lime-400 italic font-serif text-white">des genres</span>.&quot;
                       </p>
                     </div>
                   </div>
 
-                  {/* Colonne Droite (Images flottantes collages) */}
-                  <div className="flex-1 relative min-h-[100vh]">
+                  {/* Colonne Droite (Images flottantes collages) - Adapté pour mobile */}
+                  <div className="flex-1 relative min-h-[60vh] md:min-h-[100vh] mt-10 md:mt-0">
                     <div 
-                      className="w-[70%] aspect-square bg-neutral-900 absolute top-[10%] right-0 z-10 rotate-3 border border-neutral-700 overflow-hidden"
+                      className="w-[85%] md:w-[70%] aspect-square bg-neutral-900 absolute top-0 md:top-[10%] right-0 z-10 rotate-3 border border-neutral-700 overflow-hidden"
                       style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     >
                       <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase">Placeholder</div>
-                      <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-pink-500 mix-blend-screen blur-md z-10"></div>
+                      <div className="absolute top-4 left-4 w-8 h-8 md:w-12 md:h-12 rounded-full bg-pink-500 mix-blend-screen blur-md z-10"></div>
                     </div>
                     
                     <div 
-                      className="w-[60%] aspect-[4/5] bg-neutral-900 absolute top-[40%] left-[-5%] z-20 border border-neutral-700 -rotate-6 overflow-hidden"
+                      className="w-[75%] md:w-[60%] aspect-[4/5] bg-neutral-900 absolute top-[35%] md:top-[40%] left-0 md:left-[-5%] z-20 border border-neutral-700 -rotate-6 overflow-hidden"
                       style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     >
                       <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase">Placeholder</div>
@@ -265,11 +266,9 @@
                 </div>
               </section>
 
-              {/* MARQUEE BRUTALISTE Parfaitement bouclée et non-sélectable */}
-              <div className="w-full py-20 overflow-hidden flex bg-pink-500 text-[#030303] no-select">
-                <div className="flex whitespace-nowrap animate-marquee-custom font-black text-6xl md:text-9xl uppercase tracking-tighter marquee-text">
-                  
-                  {/* Bloc 1 */}
+              {/* MARQUEE BRUTALISTE */}
+              <div className="w-full py-12 md:py-20 overflow-hidden flex bg-pink-500 text-[#030303] no-select mt-10 md:mt-0">
+                <div className="flex whitespace-nowrap animate-marquee-custom font-black text-4xl md:text-8xl lg:text-9xl uppercase tracking-tighter marquee-text">
                   <div className="flex items-center min-w-max">
                     {marqueeItems.map((item, index) => (
                       <React.Fragment key={`block1-${index}`}>
@@ -278,8 +277,6 @@
                       </React.Fragment>
                     ))}
                   </div>
-
-                  {/* Bloc 2 (Duplication exacte pour boucle parfaite) */}
                   <div className="flex items-center min-w-max">
                     {marqueeItems.map((item, index) => (
                       <React.Fragment key={`block2-${index}`}>
@@ -288,68 +285,67 @@
                       </React.Fragment>
                     ))}
                   </div>
-
                 </div>
               </div>
 
               {/* PHILOSOPHIE - FULL SCREEN QUOTE */}
-              <section className="min-h-screen flex items-center justify-center p-6 md:p-20 text-center relative">
+              <section className="min-h-[70vh] md:min-h-screen flex items-center justify-center p-5 md:p-20 text-center relative">
                 <div className="absolute inset-0 bg-blue-600 mix-blend-color z-0 opacity-10"></div>
-                <h2 className="text-4xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter leading-[0.85] z-10">
+                <h2 className="text-3xl md:text-6xl lg:text-8xl font-black uppercase tracking-tighter leading-[0.9] md:leading-[0.85] z-10">
                   &quot;Après deux ans à <br/>
                   <span className="text-transparent font-serif italic font-light" style={{ WebkitTextStroke: '1px #3b82f6' }}>imaginer</span> <br/>
                   le pull parfait.&quot;
                 </h2>
               </section>
 
-              {/* MOODBOARD / ARCHIVES (Grille déstructurée) */}
-              <section id="labo-mailles" className="py-32 px-6 md:px-10">
-                <div className="mb-20">
-                  <h3 className="text-sm font-mono uppercase tracking-widest text-neutral-500 border-b border-neutral-800 pb-4">Labo Mailles &amp; Accessoires</h3>
+              {/* MOODBOARD / ARCHIVES */}
+              <section id="labo-mailles" className="py-20 md:py-32 px-5 md:px-10">
+                <div className="mb-12 md:mb-20">
+                  <h3 className="text-xs md:text-sm font-mono uppercase tracking-widest text-neutral-500 border-b border-neutral-800 pb-4">Labo Mailles &amp; Accessoires</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-y-20 md:gap-6 relative">
+                <div className="flex flex-col md:grid md:grid-cols-12 gap-12 md:gap-6 relative">
                   
                   {/* Item 1 */}
-                  <div className="md:col-span-5 md:mt-20 group">
+                  <div className="md:col-span-5 md:mt-20">
                     <div 
-                      className="aspect-[4/5] bg-neutral-900 relative overflow-hidden rotate-2 border border-neutral-700"
+                      className="aspect-[4/5] bg-neutral-900 relative overflow-hidden rotate-1 md:rotate-2 border border-neutral-700"
                       style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     >
                       <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase z-0">Placeholder</div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10"></div>
-                      <div className="absolute bottom-6 left-6 z-20">
-                        <h4 className="text-2xl font-bold uppercase tracking-tighter text-yellow-400">Mon Premier Pull</h4>
-                        <p className="font-mono text-[10px] text-neutral-300 mt-2 max-w-[80%] uppercase">Tantôt de tâtonnements, tantôt de designs.</p>
+                      <div className="absolute bottom-6 left-5 md:left-6 z-20">
+                        <h4 className="text-xl md:text-2xl font-bold uppercase tracking-tighter text-yellow-400">Mon Premier Pull</h4>
+                        <p className="font-mono text-[9px] md:text-[10px] text-neutral-300 mt-2 max-w-[90%] md:max-w-[80%] uppercase">Tantôt de tâtonnements, tantôt de designs.</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Item 2 */}
-                  <div className="md:col-span-7 group">
+                  <div className="md:col-span-7">
                     <div 
-                      className="aspect-[16/9] bg-neutral-900 relative overflow-hidden -rotate-1 border border-neutral-700"
+                      className="aspect-square md:aspect-[16/9] bg-neutral-900 relative overflow-hidden -rotate-2 md:-rotate-1 border border-neutral-700"
                       style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     >
                        <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase z-0">Placeholder</div>
                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10"></div>
-                       <div className="absolute bottom-6 right-6 z-20 text-right">
-                        <h4 className="text-2xl font-bold uppercase tracking-tighter text-blue-500">Upcycling Denim</h4>
-                        <p className="font-mono text-[10px] text-neutral-300 mt-2 ml-auto max-w-[60%] uppercase">Jeans retravaillés avec fleurs en crochet et épingles.</p>
+                       <div className="absolute bottom-6 right-5 md:right-6 z-20 text-right">
+                        <h4 className="text-xl md:text-2xl font-bold uppercase tracking-tighter text-blue-500">Upcycling Denim</h4>
+                        <p className="font-mono text-[9px] md:text-[10px] text-neutral-300 mt-2 ml-auto max-w-[80%] md:max-w-[60%] uppercase">Jeans retravaillés avec fleurs en crochet et épingles.</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Item 3 */}
-                  <div className="md:col-span-6 md:col-start-4 md:mt-[-10%] group z-30">
+                  <div className="md:col-span-6 md:col-start-4 md:mt-[-10%] z-30">
                     <div 
-                      className="aspect-square bg-neutral-900 border border-neutral-700 relative overflow-hidden rotate-3 shadow-2xl"
+                      className="aspect-square bg-neutral-900 border border-neutral-700 relative overflow-hidden rotate-2 md:rotate-3 shadow-2xl"
                       style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     >
                        <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase z-0">Placeholder</div>
-                       <div className="absolute inset-0 flex items-center justify-center p-12 text-center z-10">
-                         <p className="text-xl md:text-3xl font-serif italic text-neutral-400 leading-snug bg-black/60 p-6 backdrop-blur-sm rounded-lg">
-                           &quot;Pochettes en <span className="text-lime-400">cravates tressées</span> et sac en <span className="text-pink-500">élastiques de chantier</span>.&quot;
+                       <div className="absolute inset-0 flex items-center justify-center p-6 md:p-12 text-center z-10">
+                         <p className="text-lg md:text-3xl font-serif italic text-neutral-400 leading-snug bg-black/70 p-4 md:p-6 backdrop-blur-sm rounded-lg">
+                           &quot;Pochettes en <span className="text-lime-400">cravates</span> et sac en <span className="text-pink-500">élastiques</span>.&quot;
                          </p>
                        </div>
                     </div>
@@ -358,38 +354,33 @@
                 </div>
               </section>
 
-              {/* FOOTER ÉDITORIAL (Orienté Portfolio) */}
-              <footer id="portfolio" className="h-screen flex flex-col justify-between p-6 md:p-10 bg-neutral-950">
-                <div className="flex flex-col md:flex-row justify-between items-start mt-20 gap-10">
+              {/* FOOTER */}
+              <footer id="portfolio" className="min-h-[80vh] md:h-screen flex flex-col justify-between p-5 md:p-10 bg-neutral-950 pt-20">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-10">
                   <div className="max-w-xl">
-                    <h2 className="text-3xl md:text-5xl font-medium leading-tight mb-8">
+                    <h2 className="text-2xl md:text-5xl font-medium leading-tight mb-6 md:mb-8">
                       Une démarche <br/>
                       <span className="font-serif italic text-pink-500">artistique</span>, avant tout.
                     </h2>
-                    <p className="font-mono text-[12px] text-neutral-500 uppercase tracking-widest leading-relaxed">
+                    <p className="font-mono text-[10px] md:text-[12px] text-neutral-500 uppercase tracking-widest leading-relaxed">
                       Ce portfolio est une archive vivante de mes expérimentations. Une vitrine de la mode au point de convergence des luttes, pensée non pas comme un produit, mais comme un message.
                     </p>
                   </div>
 
-                  {/* Liens secondaires (Focus Portfolio & Découverte) */}
-                  <div className="flex flex-col gap-4 text-right mt-12 md:mt-0 z-50">
-                    <a href="https://www.instagram.com/n.scouture/" target="_blank" rel="noreferrer" className="text-2xl md:text-4xl uppercase tracking-tighter hover:text-pink-500 transition-colors font-bold relative inline-block">
+                  <div className="flex flex-col gap-4 text-left md:text-right mt-6 md:mt-0 z-50">
+                    <a href="https://www.instagram.com/n.scouture/" target="_blank" rel="noreferrer" className="text-xl md:text-4xl uppercase tracking-tighter hover:text-pink-500 transition-colors font-bold relative inline-block">
                       Instagram <span className="font-serif italic font-light">&rarr;</span>
                     </a>
                   </div>
                 </div>
 
-                {/* Huge bottom text */}
-                <div className="w-full text-center overflow-hidden relative">
-                  {/* Abstract Graphic Element inspired by the logo */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-400/10 blur-3xl rounded-full z-0 pointer-events-none"></div>
-                  
-                  <h1 className="text-[16vw] font-black leading-[0.7] tracking-tighter text-neutral-900 select-none relative z-10 whitespace-nowrap">
+                <div className="w-full text-center overflow-hidden relative mt-20 md:mt-0">
+                  <h1 className="text-[18vw] md:text-[16vw] font-black leading-[0.7] tracking-tighter text-neutral-900 select-none relative z-10 whitespace-nowrap">
                     N.S COUTURE
                   </h1>
-                  <div className="flex justify-between items-center mt-4 font-mono text-[10px] text-neutral-600 uppercase tracking-widest relative z-10">
+                  <div className="flex justify-between items-center mt-4 font-mono text-[8px] md:text-[10px] text-neutral-600 uppercase tracking-widest relative z-10">
                     <span>&copy; 2026</span>
-                    <span>Convergence des luttes</span>
+                    <span className="hidden md:inline">Convergence des luttes</span>
                     <span>FRANCE</span>
                   </div>
                 </div>
