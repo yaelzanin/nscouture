@@ -60,18 +60,19 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const App = () => {
           const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+          const mousePosRef = useRef({ x: 0, y: 0 }); // Référence pour garder la position à jour sans relancer le state
           const [isMouseVisible, setIsMouseVisible] = useState(false);
-          const [isHoveringLink, setIsHoveringLink] = useState(false);
+          const [isHoveringImage, setIsHoveringImage] = useState(false);
 
           // INERTIE GLOBALE (Uniquement sur Desktop)
           useEffect(() => {
             let currentY = window.scrollY;
             let targetY = window.scrollY;
-            let ease = 0.04; 
+            let ease = 0.08; // Poids de l'inertie allégé pour un scroll plus réactif
             let requestRef = null;
 
             const updateScroll = () => {
@@ -130,26 +131,36 @@
             window.dispatchEvent(new CustomEvent('customNavScroll', { detail: targetPosition }));
           };
 
+          // GESTION SOURIS & HOVER MÊME PENDANT LE SCROLL
           useEffect(() => {
-            // Actif uniquement sur desktop
             if (window.innerWidth > 768) {
                 const handleMouseMove = (e) => {
+                  mousePosRef.current = { x: e.clientX, y: e.clientY };
                   setMousePos({ x: e.clientX, y: e.clientY });
                   setIsMouseVisible(true);
                   
-                  // Détecte si la souris survole un lien ou un bouton
-                  const isLink = e.target.closest('a, button, [role="button"]');
-                  setIsHoveringLink(!!isLink);
+                  const isImage = e.target.closest('.image-hover');
+                  setIsHoveringImage(!!isImage);
                 };
+
+                const handleScroll = () => {
+                  // Vérifie ce qui est sous le curseur même si la souris ne bouge pas (utile pendant le scroll)
+                  const el = document.elementFromPoint(mousePosRef.current.x, mousePosRef.current.y);
+                  const isImage = el ? el.closest('.image-hover') : false;
+                  setIsHoveringImage(!!isImage);
+                };
+
                 const handleMouseLeave = () => setIsMouseVisible(false);
                 const handleMouseEnter = () => setIsMouseVisible(true);
 
                 window.addEventListener('mousemove', handleMouseMove);
+                window.addEventListener('scroll', handleScroll, { passive: true });
                 document.addEventListener('mouseleave', handleMouseLeave);
                 document.addEventListener('mouseenter', handleMouseEnter);
 
                 return () => {
                     window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('scroll', handleScroll);
                     document.removeEventListener('mouseleave', handleMouseLeave);
                     document.removeEventListener('mouseenter', handleMouseEnter);
                 };
@@ -180,8 +191,8 @@
                 <div 
                   className="rounded-full bg-white flex items-center justify-center transition-all duration-300 ease-out overflow-hidden"
                   style={{
-                    width: isHoveringLink ? '24px' : '12px', /* Taille à peine agrandie lors du survol */
-                    height: isHoveringLink ? '24px' : '12px',
+                    width: isHoveringImage ? '18px' : '12px', /* Agrandissement très léger */
+                    height: isHoveringImage ? '18px' : '12px',
                     transform: 'translate(-50%, -50%)' // Centre parfaitement le point ou le grand cercle sous la souris
                   }}
                 >
@@ -189,15 +200,14 @@
               </div>
 
               {/* NAVIGATION */}
-              <nav className="fixed top-0 w-full p-5 md:p-10 flex justify-between items-start z-50 mix-blend-difference text-white">
-                <div className="text-xs md:text-sm font-medium tracking-tight z-50 relative">
+              <nav className="fixed top-0 w-full p-5 md:p-10 flex justify-between items-start z-50 mix-blend-difference text-white pointer-events-none">
+                <div className="text-xs md:text-sm font-medium tracking-tight relative pointer-events-auto">
                   N.S COUTURE <br />
                   <span className="text-neutral-400 font-mono text-[9px] md:text-[10px] uppercase tracking-widest mt-1 block">Par @__nimzzzz__ &mdash; FR</span>
                 </div>
-                <div className="text-right text-xs md:text-sm font-medium uppercase tracking-tight flex flex-col items-end gap-2 md:gap-1 z-50 relative">
-                  <a href="#labo-couture" onClick={(e) => handleSlowScroll(e, 'labo-couture')} className="md:hover:italic transition-all">Labo Couture</a>
-                  <a href="#labo-mailles" onClick={(e) => handleSlowScroll(e, 'labo-mailles')} className="md:hover:italic transition-all">Labo Mailles</a>
-                  <a href="#portfolio" onClick={(e) => handleSlowScroll(e, 'portfolio')} className="md:hover:italic transition-all">Le Projet</a>
+                <div className="text-right text-xs md:text-sm font-medium uppercase tracking-tight flex flex-col items-end gap-2 md:gap-1 relative pointer-events-auto">
+                  <a href="#labo-couture" onClick={(e) => handleSlowScroll(e, 'labo-couture')} className="md:hover:italic transition-all">Projets</a>
+                  <a href="#portfolio" onClick={(e) => handleSlowScroll(e, 'portfolio')} className="md:hover:italic transition-all">Contact</a>
                 </div>
               </nav>
 
@@ -211,8 +221,8 @@
                 </div>
 
                 {/* Image Editoriale Flottante */}
-                <div className="absolute right-[-10%] md:right-[5%] lg:right-[15%] top-[25%] md:top-[10%] w-[95vw] md:w-[45vw] lg:w-[30vw] aspect-[3/4] bg-neutral-900 z-0 opacity-40 md:opacity-80">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center grayscale contrast-[1.2] opacity-80 mix-blend-overlay"></div>
+                <div className="absolute right-[-10%] md:right-[5%] lg:right-[15%] top-[25%] md:top-[10%] w-[95vw] md:w-[45vw] lg:w-[30vw] aspect-[3/4] bg-neutral-900 z-0 opacity-60 md:opacity-100 transition-transform duration-1000 ease-out">
+                  <div className="absolute inset-0 bg-[url('assets/nima.jpg')] bg-cover bg-center grayscale contrast-[1.1] opacity-100 mix-blend-overlay"></div>
                   <div className="absolute bottom-4 right-[-1rem] font-mono text-[9px] md:text-[10px] text-neutral-400 tracking-widest uppercase origin-bottom-right -rotate-90">
                     [ ARCHIVE_01.MP4 ]
                   </div>
@@ -234,7 +244,7 @@
                 </div>
               </section>
 
-              {/* MANIFESTE - SCROLL ASYMÉTRIQUE (Restructuré pour Mobile) */}
+              {/* MANIFESTE - SCROLL ASYMÉTRIQUE */}
               <section id="labo-couture" className="py-24 md:py-32 px-5 md:px-20 relative">
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-16 md:gap-20">
                   
@@ -249,12 +259,11 @@
                       <p className="text-xl md:text-4xl font-medium leading-tight">
                         &quot;La cravate : détourner un symbole du <span className="text-blue-500 italic font-serif">patriarcat</span> pour s&apos;en <span className="text-pink-500 italic font-serif">émanciper</span>.&quot;
                       </p>
-                      {/* Image Placeholder visible uniquement sur mobile pour aérer le design */}
+                      {/* Image visible uniquement sur mobile */}
                       <div 
-                        className="md:hidden mt-10 w-[85%] mx-auto aspect-square bg-neutral-900 rotate-2 border border-neutral-700 overflow-hidden relative shadow-xl"
-                        style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                        className="md:hidden mt-10 w-[85%] mx-auto aspect-square bg-neutral-900 rotate-2 border border-neutral-700 overflow-hidden relative shadow-xl bg-cover bg-center image-hover"
+                        style={{ backgroundImage: "url('assets/clothes/cravate.jpg')" }}
                       >
-                        <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase">Placeholder</div>
                         <div className="absolute top-4 left-4 w-10 h-10 rounded-full bg-pink-500 mix-blend-screen blur-md z-10"></div>
                       </div>
                     </div>
@@ -267,12 +276,11 @@
                       <p className="text-xl md:text-4xl font-medium leading-tight text-neutral-400">
                         &quot;Mosaïque sensée inspirée de la <span className="text-yellow-400 text-white italic font-serif">créolisation</span>, de la fusion des peuples, des cultures et <span className="text-lime-400 italic font-serif text-white">des genres</span>.&quot;
                       </p>
-                      {/* Image Placeholder visible uniquement sur mobile */}
+                      {/* Image visible uniquement sur mobile */}
                       <div 
-                        className="md:hidden mt-10 w-[95%] aspect-[4/5] bg-neutral-900 -rotate-2 border border-neutral-700 overflow-hidden relative shadow-xl"
-                        style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                        className="md:hidden mt-10 w-[95%] aspect-[4/5] bg-neutral-900 -rotate-2 border border-neutral-700 overflow-hidden relative shadow-xl bg-cover bg-center image-hover"
+                        style={{ backgroundImage: "url('assets/clothes/jupe.jpg')" }}
                       >
-                        <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase">Placeholder</div>
                       </div>
                     </div>
 
@@ -281,18 +289,16 @@
                   {/* Colonne Droite (Images flottantes collages) - Visible uniquement sur Desktop */}
                   <div className="hidden md:block flex-1 relative min-h-[100vh]">
                     <div 
-                      className="w-[70%] aspect-square bg-neutral-900 absolute top-[10%] right-0 z-10 rotate-3 border border-neutral-700 overflow-hidden"
-                      style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                      className="w-[70%] aspect-square bg-neutral-900 absolute top-[10%] right-0 z-10 rotate-3 border border-neutral-700 overflow-hidden bg-cover bg-center transition-transform duration-700 ease-out md:hover:rotate-0 md:hover:scale-105 md:hover:z-30 image-hover"
+                      style={{ backgroundImage: "url('assets/clothes/cravate.jpg')" }}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase">Placeholder</div>
                       <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-pink-500 mix-blend-screen blur-md z-10"></div>
                     </div>
                     
                     <div 
-                      className="w-[60%] aspect-[4/5] bg-neutral-900 absolute top-[40%] left-[-5%] z-20 border border-neutral-700 -rotate-6 overflow-hidden"
-                      style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                      className="w-[60%] aspect-[4/5] bg-neutral-900 absolute top-[40%] left-[-5%] z-20 border border-neutral-700 -rotate-6 overflow-hidden bg-cover bg-center transition-transform duration-700 ease-out md:hover:rotate-0 md:hover:scale-105 md:hover:z-30 image-hover"
+                      style={{ backgroundImage: "url('assets/clothes/jupe.jpg')" }}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase">Placeholder</div>
                     </div>
                   </div>
                 </div>
@@ -320,7 +326,7 @@
                 </div>
               </div>
 
-              {/* PHILOSOPHIE - FULL SCREEN QUOTE (Ajusté pour mobile) */}
+              {/* PHILOSOPHIE - FULL SCREEN QUOTE */}
               <section className="min-h-[60vh] md:min-h-screen flex items-center justify-center p-5 md:p-20 text-center relative">
                 <div className="absolute inset-0 bg-blue-600 mix-blend-color z-0 opacity-10"></div>
                 <h2 className="text-[2.5rem] leading-[1.1] md:text-6xl lg:text-8xl font-black uppercase tracking-tighter md:leading-[0.85] z-10">
@@ -338,46 +344,44 @@
 
                 <div className="flex flex-col md:grid md:grid-cols-12 gap-12 md:gap-6 relative">
                   
-                  {/* Item 1 */}
+                  {/* Item 1 - Premier Pull (Placeholder) */}
                   <div className="md:col-span-5 md:mt-20">
                     <div 
-                      className="aspect-[4/5] bg-neutral-900 relative overflow-hidden rotate-1 md:rotate-2 border border-neutral-700"
+                      className="aspect-[4/5] bg-neutral-900 relative overflow-hidden rotate-1 md:rotate-2 border border-neutral-700 transition-transform duration-700 ease-out md:hover:scale-[1.03] md:hover:rotate-0 image-hover"
                       style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     >
                       <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase z-0">Placeholder</div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10"></div>
-                      <div className="absolute bottom-6 left-5 md:left-6 z-20">
+                      <div className="absolute bottom-6 left-5 md:left-6 z-20 pointer-events-none">
                         <h4 className="text-xl md:text-2xl font-bold uppercase tracking-tighter text-yellow-400">Mon Premier Pull</h4>
                         <p className="font-mono text-[9px] md:text-[10px] text-neutral-300 mt-2 max-w-[90%] md:max-w-[80%] uppercase">Tantôt de tâtonnements, tantôt de designs.</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Item 2 */}
+                  {/* Item 2 - Upcycling Denim */}
                   <div className="md:col-span-7">
                     <div 
-                      className="aspect-square md:aspect-[16/9] bg-neutral-900 relative overflow-hidden -rotate-2 md:-rotate-1 border border-neutral-700"
-                      style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                      className="aspect-square md:aspect-[16/9] bg-neutral-900 relative overflow-hidden -rotate-2 md:-rotate-1 border border-neutral-700 bg-cover bg-center transition-transform duration-700 ease-out md:hover:scale-[1.03] md:hover:rotate-0 image-hover"
+                      style={{ backgroundImage: "url('assets/clothes/jean.jpg')" }}
                     >
-                       <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase z-0">Placeholder</div>
-                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10"></div>
-                       <div className="absolute bottom-6 right-5 md:right-6 z-20 text-right">
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10 transition-opacity duration-700 ease-out md:hover:opacity-70 pointer-events-none"></div>
+                       <div className="absolute bottom-6 right-5 md:right-6 z-20 text-right pointer-events-none">
                         <h4 className="text-xl md:text-2xl font-bold uppercase tracking-tighter text-blue-500">Upcycling Denim</h4>
                         <p className="font-mono text-[9px] md:text-[10px] text-neutral-300 mt-2 ml-auto max-w-[80%] md:max-w-[60%] uppercase">Jeans retravaillés avec fleurs en crochet et épingles.</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Item 3 */}
+                  {/* Item 3 - Sac brodé */}
                   <div className="md:col-span-6 md:col-start-4 md:mt-[-10%] z-30">
                     <div 
-                      className="aspect-square bg-neutral-900 border border-neutral-700 relative overflow-hidden rotate-2 md:rotate-3 shadow-2xl"
-                      style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                      className="aspect-square bg-neutral-900 border border-neutral-700 relative overflow-hidden rotate-2 md:rotate-3 shadow-2xl bg-cover bg-center transition-transform duration-700 ease-out md:hover:scale-[1.03] md:hover:rotate-0 image-hover"
+                      style={{ backgroundImage: "url('assets/clothes/sac.jpg')" }}
                     >
-                       <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-neutral-400 tracking-widest uppercase z-0">Placeholder</div>
-                       <div className="absolute inset-0 flex items-center justify-center p-6 md:p-12 text-center z-10">
-                         <p className="text-lg md:text-3xl font-serif italic text-neutral-400 leading-snug bg-black/70 p-4 md:p-6 backdrop-blur-sm rounded-lg">
-                           &quot;Pochettes en <span className="text-lime-400">cravates</span> et sac en <span className="text-pink-500">élastiques</span>.&quot;
+                       <div className="absolute inset-0 flex items-center justify-center p-6 md:p-12 text-center z-10 transition-colors duration-700 ease-out md:hover:bg-black/20 bg-transparent pointer-events-none">
+                         <p className="text-lg md:text-3xl font-serif italic text-neutral-400 leading-snug bg-black/80 p-4 md:p-6 backdrop-blur-sm rounded-lg">
+                           &quot;Sac <span className="text-lime-400">patchwork</span> et broderies : une accumulation de <span className="text-pink-500">tissus</span>.&quot;
                          </p>
                        </div>
                     </div>
@@ -386,7 +390,80 @@
                 </div>
               </section>
 
-              {/* FOOTER (Restructuré avec le texte en arrière-plan plus visible) */}
+              {/* COLLABORATIONS / SCÈNE */}
+              <section id="collabs" className="py-24 md:py-32 px-5 md:px-10 relative">
+                {/* Ligne de séparation subtile */}
+                <div className="absolute top-0 left-5 md:left-10 right-5 md:right-10 h-[1px] bg-neutral-900"></div>
+                
+                <div className="max-w-7xl mx-auto">
+                  <div className="flex flex-col md:flex-row justify-between items-start gap-10 mb-20 md:mb-32 pt-10">
+                    <div className="max-w-3xl">
+                       <p className="font-mono text-[10px] md:text-xs text-neutral-500 uppercase tracking-widest mb-6 border-b border-neutral-800 pb-3 inline-block">
+                         03 &mdash; Sur Scène & En Clip
+                       </p>
+                       <h2 className="text-3xl md:text-5xl lg:text-7xl font-medium leading-[1.1]">
+                         Habiller l'<span className="font-serif italic text-blue-500">aura</span>.<br/>
+                         Pièces uniques pour la <span className="font-serif italic text-pink-500">performance</span>.
+                       </h2>
+                    </div>
+                    <p className="font-mono text-[10px] md:text-xs text-neutral-400 uppercase tracking-widest leading-relaxed max-w-xs md:text-right md:mt-auto">
+                      Collaboration étroite avec les artistes pour traduire leur identité visuelle à travers des volumes architecturaux et des matières upcyclées.
+                    </p>
+                  </div>
+
+                  {/* Grille asymétrique en cascade */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 lg:gap-12">
+                    
+                    {/* Collab 1 : Pleorad */}
+                    <div className="group block">
+                      <div className="aspect-[3/4] bg-neutral-900 relative overflow-hidden border border-neutral-800 transition-transform duration-700 ease-out md:group-hover:scale-[1.03] shadow-lg bg-cover bg-center image-hover" 
+                           style={{ backgroundImage: "url('assets/artists/pleorad.png')" }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 md:group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                      </div>
+                      <div className="mt-6 flex justify-between items-start border-t border-neutral-900 pt-4 md:group-hover:border-neutral-700 transition-colors">
+                        <div>
+                          <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter text-white md:group-hover:text-pink-500 transition-colors">Pleorad</h4>
+                          <p className="font-mono text-[9px] md:text-[10px] text-neutral-500 uppercase mt-1">Clip "Des billets et de l'or"</p>
+                        </div>
+                        <a href="https://www.instagram.com/pleorad_/" target="_blank" rel="noreferrer" className="font-serif italic text-neutral-600 hover:text-pink-500 transition-colors text-sm relative z-20">@pleorad_</a>
+                      </div>
+                    </div>
+
+                    {/* Collab 2 : Iliana */}
+                    <div className="group block md:mt-16">
+                      <div className="aspect-[3/4] bg-neutral-900 relative overflow-hidden border border-neutral-800 transition-transform duration-700 ease-out md:group-hover:scale-[1.03] shadow-lg bg-cover bg-center image-hover" 
+                           style={{ backgroundImage: "url('assets/artists/iliana.png')" }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 md:group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                      </div>
+                      <div className="mt-6 flex justify-between items-start border-t border-neutral-900 pt-4 md:group-hover:border-neutral-700 transition-colors">
+                        <div>
+                          <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter text-white md:group-hover:text-blue-500 transition-colors">Iliana</h4>
+                          <p className="font-mono text-[9px] md:text-[10px] text-neutral-500 uppercase mt-1">Sur scène</p>
+                        </div>
+                        <a href="https://www.instagram.com/ilianamsc/" target="_blank" rel="noreferrer" className="font-serif italic text-neutral-600 hover:text-blue-500 transition-colors text-sm relative z-20">@ilianamsc</a>
+                      </div>
+                    </div>
+
+                    {/* Collab 3 : Alijah */}
+                    <div className="group block md:mt-32">
+                      <div className="aspect-[3/4] bg-neutral-900 relative overflow-hidden border border-neutral-800 transition-transform duration-700 ease-out md:group-hover:scale-[1.03] shadow-lg bg-cover bg-center image-hover" 
+                           style={{ backgroundImage: "url('assets/artists/alijah.png')" }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 md:group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                      </div>
+                      <div className="mt-6 flex justify-between items-start border-t border-neutral-900 pt-4 md:group-hover:border-neutral-700 transition-colors">
+                        <div>
+                          <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter text-white md:group-hover:text-yellow-400 transition-colors">Alijah</h4>
+                          <p className="font-mono text-[9px] md:text-[10px] text-neutral-500 uppercase mt-1">Sur scène</p>
+                        </div>
+                        <a href="https://www.instagram.com/leanchihiro/" target="_blank" rel="noreferrer" className="font-serif italic text-neutral-600 hover:text-yellow-400 transition-colors text-sm relative z-20">@leanchihiro</a>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </section>
+
+              {/* FOOTER */}
               <footer id="portfolio" className="min-h-[85vh] md:h-screen flex flex-col justify-between p-6 md:p-10 bg-neutral-950 relative overflow-hidden">
                 
                 {/* GIANT BACKGROUND TEXT (Filigrane étiré verticalement et centré) */}
@@ -416,12 +493,17 @@
                   </a>
                 </div>
 
-                {/* Copyright collé en bas */}
+                {/* Copyright et Crédits collés en bas */}
                 <div className="w-full relative z-10 mt-auto pt-6 max-w-7xl mx-auto">
-                  <div className="flex flex-row justify-between items-end font-mono text-[9px] md:text-xs text-neutral-500 uppercase tracking-widest">
-                    <span>&copy; 2026</span>
-                    <span className="text-center hidden md:block">Convergence des luttes</span>
-                    <span>FRANCE</span>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-row justify-between items-end font-mono text-[9px] md:text-xs text-neutral-500 uppercase tracking-widest">
+                      <span>&copy; 2026</span>
+                      <span className="text-center hidden md:block">Convergence des luttes</span>
+                      <span>FRANCE</span>
+                    </div>
+                    <div className="text-center font-mono text-[8px] md:text-[10px] text-neutral-600 uppercase tracking-widest">
+                      Design & Développement par <a href="https://www.instagram.com/yzanin.fr/" target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-white transition-colors">Yaël Zanin</a>
+                    </div>
                   </div>
                 </div>
               </footer>
